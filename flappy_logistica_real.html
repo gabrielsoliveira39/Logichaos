@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy LogiChaos: Controle & Pausa</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111827;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 3px solid #334155;
+        }
+
+        canvas {
+            background: #70c5ce;
+            display: block;
+        }
+
+        /* Telas de Overlay */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: #f59e0b;
+            text-shadow: 2px 2px #000;
+        }
+
+        p.question-text {
+            font-size: 18px;
+            max-width: 600px;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            color: #e2e8f0;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .option-btn {
+            background: #1e293b;
+            color: white;
+            border: 2px solid #475569;
+            padding: 14px;
+            font-size: 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .option-btn:hover {
+            background: #334155;
+            border-color: #f59e0b;
+            transform: scale(1.01);
+        }
+
+        .btn-action {
+            background: #f59e0b;
+            color: #1e293b;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 20px;
+            text-transform: uppercase;
+        }
+
+        .btn-action:hover {
+            background: #d97706;
+        }
+
+        /* Placar no topo */
+        #score-display {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 3px 3px 0px #000;
+            z-index: 5;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="score-display">0</div>
+
+    <div id="start-screen" class="overlay">
+        <h2>📦 FLAPPY LOGIQUIZ 🦅</h2>
+        <p style="max-width: 500px;">Suba e desça usando a barra de <b>ESPAÇO</b> ou o <b>CLIQUE</b>. O jogo vai pausar automaticamente antes de cada cano para o Quiz!</p>
+        <button class="btn-action" onclick="startGame()">Iniciar Turno</button>
+    </div>
+
+    <div id="quiz-screen" class="overlay hidden">
+        <h2 id="quiz-title">🚨 INSPEÇÃO DA DOCA!</h2>
+        <p id="question-content" class="question-text">Carregando pergunta...</p>
+        <div class="options-grid" id="options-box">
+        </div>
+    </div>
+
+    <div id="end-screen" class="overlay hidden">
+        <h2 id="end-title">💥 CRASH OPERACIONAL!</h2>
+        <p id="end-message">Sua operação gerou um gargalo insustentável.</p>
+        <button class="btn-action" onclick="restartGame()">Reiniciar Sistema</button>
+    </div>
+
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+</div>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Banco de Dados das Perguntas
+    const perguntas = [
+        {
+            titulo: "⚡ CANO 1: Layout & Curva ABC",
+            pergunta: "Para otimizar o fluxo de movimentação interna e o layout de um CD, onde devem ser alocados os produtos classificados como 'Curva A'?",
+            opcoes: {
+                A: "Nos níveis mais altos das estruturas porta-paletes do fundo do armazém.",
+                B: "Em uma zona de picking dinâmico próxima às docas de recebimento e expedição.",
+                C: "No pátio externo de blocados para economizar espaço interno.",
+                D: "Misturados uniformemente com os produtos das Curvas B e C."
+            },
+            correta: "B"
+        },
+        {
+            titulo: "🚜 CANO 2: Equipamentos de Movimentação",
+            pergunta: "Em um armazém fechado de produtos alimentícios verticalizados, qual equipamento de movimentação é PROIBIDO devido a normas de segurança e saúde?",
+            opcoes: {
+                A: "Empilhadeira Elétrica Retrátil.",
+                B: "Transpaleteira Manual.",
+                C: "Empilhadeira a Combustão (GLP/Diesel).",
+                D: "Transelevador Automático."
+            },
+            correta: "C"
+        },
+        {
+            titulo: "📋 CANO 3: Processo de Conferência",
+            pergunta: "Durante o recebimento de uma carga, o operador logístico percebe que a quantidade física é menor do que a descrita na Nota Fiscal. Qual o procedimento padrão correto?",
+            opcoes: {
+                A: "Aceitar a carga normalmente e corrigir o saldo no inventário dali a 6 meses.",
+                B: "Recusar a carga ou aceitar registrando uma ressalva formal no verso da Nota Fiscal e direcionar os itens para a área de Quarentena/Segregação.",
+                C: "Ignorar a nota e lançar no sistema o valor que o motorista disser de cabeça.",
+                D: "Ocultar a divergência para não atrasar o giro das docas."
+            },
+            correta: "B"
+        },
+        {
+            titulo: "📐 CANO 4: O Desafio de Cubagem",
+            pergunta: "Um espaço de blocado tem 10m de largura por 12m de comprimento. Descontando um corredor central obrigatório de 2m de largura por todo o comprimento para manobra, sobram duas faixas de armazenamento. Sabendo que cada palete PBR ocupa 1,20m x 1,00m de chão e podemos empilhar em até 3 níveis de altura, qual a capacidade máxima do setor?",
+            opcoes: {
+                A: "120 Paletes",
+                B: "180 Paletes",
+                C: "240 Paletes",
+                D: "360 Paletes"
+            },
+            correta: "C"
+        }
+    ];
+
+    // Estados do Jogo
+    let gameState = "START"; // START, FLYING, QUIZ, GAMEOVER, WIN
+    let score = 0;
+    let currentQuestionIndex = 0;
+
+    // Propriedades do Pássaro Clássico - flapForce alterada de -6.5 para -4.5 para encurtar o pulo
+    const bird = {
+        x: 150,
+        y: 200,
+        radius: 16,
+        velocity: 0,
+        gravity: 0.3,
+        flapForce: -4.5
+    };
+
+    // Propriedades dos Canos Verdes Clássicos
+    const pipe = {
+        x: 850,
+        width: 80,
+        topHeight: 180,
+        bottomY: 320,
+        speed: 3.0,
+        quizTriggered: false
+    };
+
+    // --- ENGENHARIA DE CONTROLES (JOGADOR VOA NA MARRA) ---
+    function flap() {
+        if (gameState === "FLYING") {
+            bird.velocity = bird.flapForce;
+        }
+    }
+    window.addEventListener("keydown", (e) => { if (e.code === "Space") flap(); });
+    canvas.addEventListener("mousedown", flap);
+
+
+    // --- FUNÇÕES DE DESENHO ORIGINAIS ---
+    function drawBird() {
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath();
+        ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#1e293b";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Olho
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(bird.x + 6, bird.y - 4, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "black";
+        ctx.beginPath();
+        ctx.arc(bird.x + 7, bird.y - 4, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Bico
+        ctx.fillStyle = "#ef4444";
+        ctx.beginPath();
+        ctx.moveTo(bird.x + 14, bird.y - 2);
+        ctx.lineTo(bird.x + 25, bird.y + 3);
+        ctx.lineTo(bird.x + 14, bird.y + 8);
+        ctx.closePath();
+        ctx.fill();
+    }
+
+    function drawPipes() {
+        ctx.fillStyle = "#15803d"; // Verde clássico dos canos
+        ctx.strokeStyle = "#14532d";
+        ctx.lineWidth = 4;
+
+        // Cano Superior
+        ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
+        ctx.strokeRect(pipe.x, -5, pipe.width, pipe.topHeight + 5);
+
+        // Borda do Cano Superior
+        ctx.fillStyle = "#16a34a";
+        ctx.fillRect(pipe.x - 4, pipe.topHeight - 20, pipe.width + 8, 20);
+        ctx.strokeRect(pipe.x - 4, pipe.topHeight - 20, pipe.width + 8, 20);
+
+        // Cano Inferior
+        ctx.fillStyle = "#15803d";
+        ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
+        ctx.strokeRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY + 5);
+
+        // Borda do Cano Inferior
+        ctx.fillStyle = "#16a34a";
+        ctx.fillRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, 20);
+        ctx.strokeRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, 20);
+    }
+
+    // --- ATUALIZAÇÕES DA FÍSICA E REGRAS ---
+    function updateGame() {
+        if (gameState === "FLYING") {
+            // Aplicar gravidade no voo
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+
+            // Move os canos
+            pipe.x -= pipe.speed;
+
+            // Colisão com teto ou chão dá Game Over
+            if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
+                triggerGameOver("O pássaro caiu fora dos limites do armazém!");
+                return;
+            }
+
+            // GATILHO DE PAUSA: Quando o cano chega perto (120px de distância), pausa para a pergunta
+            if (pipe.x <= bird.x + 150 && !pipe.quizTriggered) {
+                gameState = "QUIZ";
+                pipe.quizTriggered = true;
+                showQuiz();
+                return;
+            }
+
+            // Se o cano passar fisicamente do jogador, checa colisão tradicional do Flappy Bird
+            if (pipe.x <= bird.x + bird.radius && pipe.x + pipe.width >= bird.x - bird.radius) {
+                if (bird.y - bird.radius < pipe.topHeight || bird.y + bird.radius > pipe.bottomY) {
+                    triggerGameOver("Colisão física! Você bateu na estrutura do cano.");
+                    return;
+                }
+            }
+
+            // Reset do cano após passar com sucesso por ele
+            if (pipe.x + pipe.width < 0) {
+                score++;
+                document.getElementById("score-display").innerText = score;
+                currentQuestionIndex++;
+
+                if (currentQuestionIndex >= perguntas.length) {
+                    gameState = "WIN";
+                    showEndScreen(true);
+                } else {
+                    pipe.x = 850;
+                    pipe.quizTriggered = false; // Permite ativar o quiz no próximo cano
+                }
+            }
+        }
+    }
+
+    function render() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Chão decorativo simples
+        ctx.fillStyle = "#e2e8f0";
+        ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+
+        drawPipes();
+        drawBird();
+    }
+
+    function gameLoop() {
+        updateGame();
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // --- INTERFACE DO INTERRUPTOR DE REGRAS (QUIZ) ---
+    function showQuiz() {
+        const q = perguntas[currentQuestionIndex];
+        document.getElementById("quiz-title").innerText = q.titulo;
+        document.getElementById("question-content").innerText = q.pergunta;
+
+        const box = document.getElementById("options-box");
+        box.innerHTML = "";
+
+        for(let letra in q.opcoes) {
+            let btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.innerHTML = `<strong>[${letra}]</strong> ${q.opcoes[letra]}`;
+            btn.onclick = () => processAnswer(letra);
+            box.appendChild(btn);
+        }
+
+        document.getElementById("quiz-screen").classList.remove("hidden");
+    }
+
+    // Processar resposta sem exibir o gabarito ao errar
+    function processAnswer(selected) {
+        document.getElementById("quiz-screen").classList.add("hidden");
+        const correct = perguntas[currentQuestionIndex].correta;
+
+        if (selected === correct) {
+            // Resposta certa destrava o jogo! Dá um pequeno impulso para cima para ajudar
+            bird.velocity = -4; 
+            gameState = "FLYING";
+        } else {
+            // Resposta errada dá Game Over ocultando a alternativa correta
+            triggerGameOver(`Resposta Incorreta! Você escolheu a alternativa [${selected}] e o cano bloqueou a passagem.`);
+        }
+    }
+
+    function triggerGameOver(motivo) {
+        gameState = "GAMEOVER";
+        showEndScreen(false, motivo);
+    }
+
+    function showEndScreen(isWin, motivo = "") {
+        const screen = document.getElementById("end-screen");
+        const title = document.getElementById("end-title");
+        const msg = document.getElementById("end-message");
+
+        if(isWin) {
+            title.innerText = "🏆 SUCESSO OPERACIONAL! 🥇";
+            title.style.color = "#10b981";
+            msg.innerText = `Sensacional! Vocês responderam tudo certo e pilotaram com maestria até o final!`;
+        } else {
+            title.innerText = "💥 CRASH OPERACIONAL!";
+            title.style.color = "#ef4444";
+            msg.innerText = motivo;
+        }
+
+        screen.classList.remove("hidden");
+    }
+
+    function startGame() {
+        document.getElementById("start-screen").classList.add("hidden");
+        score = 0;
+        currentQuestionIndex = 0;
+        document.getElementById("score-display").innerText = score;
+        bird.y = 200;
+        bird.velocity = 0;
+        pipe.x = 850;
+        pipe.quizTriggered = false;
+        gameState = "FLYING";
+    }
+
+    function restartGame() {
+        document.getElementById("end-screen").classList.add("hidden");
+        startGame();
+    }
+
+    // Inicializa a renderização contínua
+    gameLoop();
+</script>
+
+</body>
+</html>
