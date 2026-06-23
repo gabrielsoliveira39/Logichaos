@@ -156,7 +156,7 @@
         <p style="max-width: 500px;">Suba e desça usando a barra de <b>ESPAÇO</b> ou o <b>CLIQUE</b>.<br><br>
         ⚠️ <b>REGRAS DA DISPUTA:</b><br>
         • Colisão física com cano ou chão = <b>Game Over Direto</b>.<br>
-        • Errar pergunta do Quiz = <b>Perde 1 Vida</b> (Você tem 5 vidas total).
+        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>!
         </p>
         <button class="btn-action" onclick="startGame()">Iniciar Turno</button>
     </div>
@@ -295,7 +295,7 @@
     ];
 
     // Estados do Jogo
-    let gameState = "START"; // START, FLYING, QUIZ, GAMEOVER, WIN
+    let gameState = "START"; 
     let score = 0;
     let lives = 5;
     let currentQuestionIndex = 0;
@@ -422,7 +422,7 @@
                 }
             }
 
-            // Passou pelo cano com sucesso
+            // Passou pelo cano com sucesso (Acertou a pergunta e cruzou a barreira)
             if (pipe.x + pipe.width < 0) {
                 score++;
                 currentQuestionIndex++;
@@ -481,23 +481,24 @@
         const correct = perguntas[currentQuestionIndex].correta;
 
         if (selected === correct) {
-            // Acertou: O jogo continua normal e dá um pequeno pulo para estabilizar
+            // Acertou: Libera o voo para cruzar o cano atual
             bird.velocity = -3.5; 
             gameState = "FLYING";
         } else {
-            // Errou a resposta: Perde uma vida! O jogo NÃO dá game over se tiver vidas sobressalentes
+            // Errou a resposta: Perde uma vida!
             lives--;
             updateHUD();
 
             if (lives <= 0) {
                 triggerGameOver(`📉 QUEBRA DE SLA! Você errou a resposta da alternativa [${selected}] e esgotou todas as suas vidas operacionais.`);
             } else {
-                // Se ainda tem vidas, o jogo assume que ele passou "com avaria" pelo cano e prossegue
+                // NÃO AVANÇA A PERGUNTA: O cano volta para trás (extrema direita) 
+                // e o gatilho é resetado para exigir a mesma pergunta novamente.
                 bird.velocity = -3.5;
                 gameState = "FLYING";
                 
-                // Força o cano atual a sumir para não causar colisão física injusta após sair do menu
-                pipe.x = -100; 
+                pipe.x = 850; 
+                pipe.quizTriggered = false; 
             }
         }
     }
