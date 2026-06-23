@@ -115,6 +115,13 @@
             background: #d97706;
         }
 
+        /* Bloqueio definitivo em caso de derrota */
+        .btn-disabled {
+            background: #4b5563 !important;
+            color: #9ca3af !important;
+            cursor: not-allowed !important;
+        }
+
         /* Displays de Status (Placar e Vidas) */
         #hud-container {
             position: absolute;
@@ -141,6 +148,16 @@
             font-size: 28px;
             text-shadow: 2px 2px 0px #000;
         }
+
+        .metric-badge {
+            background: #374151;
+            border: 1px solid #4b5563;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin: 5px;
+            display: inline-block;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -156,9 +173,10 @@
         <p style="max-width: 500px;">Manobre o caminhão subindo e descendo usando a barra de <b>ESPAÇO</b> ou o <b>CLIQUE</b>.<br><br>
         ⚠️ <b>REGRAS DA DISPUTA:</b><br>
         • Colisão física com estruturas ou chão = <b>Game Over Direto</b>.<br>
-        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>!
+        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>.<br>
+        • ❌ <b>PERDEU UMA VEZ, PERDEU PARA SEMPRE:</b> O sistema salvará os dados da falência e este terminal será bloqueado permanentemente!
         </p>
-        <button class="btn-action" onclick="startGame()">Iniciar Turno</button>
+        <button id="start-btn" class="btn-action" onclick="startGame()">Iniciar Turno</button>
     </div>
 
     <div id="quiz-screen" class="overlay hidden">
@@ -170,7 +188,18 @@
     <div id="end-screen" class="overlay hidden">
         <h2 id="end-title">💥 CRASH OPERACIONAL!</h2>
         <p id="end-message">Sua operação gerou um gargalo insustentável.</p>
-        <button class="btn-action" onclick="restartGame()">Reiniciar Sistema</button>
+        <button id="restart-btn" class="btn-action" onclick="restartGame()">Reiniciar Sistema</button>
+    </div>
+
+    <!-- Tela Crítica de Bloqueio Persistente -->
+    <div id="blocked-screen" class="overlay hidden">
+        <h2 style="color: #ef4444;">🚫 ACESSO TERMINAL BLOQUEADO</h2>
+        <p style="max-width: 600px; font-size: 18px; color: #f3f4f6; line-height: 1.6;">
+            Sua licença de operador logístico foi <b>revogada permanentemente</b> neste terminal devido a uma falha na gestão da cadeia de suprimentos.<br><br>
+            A recarga da página ou a troca de abas foram travadas pela governança de TI.
+        </p>
+        <div id="blocked-metrics" style="margin: 15px 0;"></div>
+        <p id="blocked-reason" style="color: #fca5a5; font-style: italic; font-size: 14px; margin-top: 10px; max-width: 600px;"></p>
     </div>
 
     <canvas id="gameCanvas" width="800" height="500"></canvas>
@@ -321,6 +350,35 @@
         quizTriggered: false
     };
 
+    // --- SISTEMA DE VERIFICAÇÃO DE BLOQUEIO SEVERO ---
+    function checkBlockStatus() {
+        const isBlocked = localStorage.getItem("logichaos_blocked");
+        if (isBlocked === "true") {
+            gameState = "PERMABOCKED";
+            const motivo = localStorage.getItem("logichaos_reason") || "Motivo não especificado.";
+            const vidasRestantes = localStorage.getItem("logichaos_lives") || "0";
+            const canoFalha = localStorage.getItem("logichaos_pipe") || "Indefinido";
+            
+            document.getElementById("start-screen").classList.add("hidden");
+            document.getElementById("quiz-screen").classList.add("hidden");
+            document.getElementById("end-screen").classList.add("hidden");
+            
+            // Renderiza as métricas da falha gravada
+            const metricsBox = document.getElementById("blocked-metrics");
+            metricsBox.innerHTML = `
+                <div class="metric-badge">🛑 Local do Erro: <b>${canoFalha}</b></div>
+                <div class="metric-badge">💔 Saldo de Vidas no Impacto: <b>${vidasRestantes}</b></div>
+            `;
+            
+            document.getElementById("blocked-reason").innerText = `Histórico de Auditoria: ${motivo}`;
+            document.getElementById("blocked-screen").classList.remove("hidden");
+            return true;
+        }
+        return false;
+    }
+
+    window.addEventListener("DOMContentLoaded", checkBlockStatus);
+
     // Controles
     function flap() {
         if (gameState === "FLYING") {
@@ -330,140 +388,76 @@
     window.addEventListener("keydown", (e) => { if (e.code === "Space") flap(); });
     canvas.addEventListener("mousedown", flap);
 
-    // Desenha o Caminhão de Entregas vetorial no Canvas
+    // Desenhos Auxiliares (Caminhão e Caixas)
     function drawTruck() {
         ctx.save();
         ctx.translate(truck.x, truck.y);
 
-        // 1. Baú de Carga (Traseira)
         ctx.fillStyle = "#f8fafc"; 
         ctx.fillRect(-25, -16, 32, 26);
         ctx.strokeStyle = "#94a3b8";
         ctx.lineWidth = 1.5;
         ctx.strokeRect(-25, -16, 32, 26);
 
-        // Divisão da folha da porta traseira do baú
         ctx.beginPath();
         ctx.moveTo(-21, -16);
         ctx.lineTo(-21, 10);
         ctx.stroke();
 
-        // 2. Cabine do Motorista (Frente)
         ctx.fillStyle = "#3b82f6"; 
         ctx.fillRect(7, -6, 18, 16);
         
-        // Para-brisa / Janela lateral
         ctx.fillStyle = "#67e8f9";
         ctx.fillRect(16, -4, 7, 6);
 
-        // Para-choque
         ctx.fillStyle = "#1e293b";
         ctx.fillRect(21, 6, 5, 4);
 
-        // 3. Rodas com detalhe de calota central
-        // Roda Traseira 1
+        // Rodas
         ctx.fillStyle = "#0f172a";
-        ctx.beginPath();
-        ctx.arc(-15, 13, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#94a3b8";
-        ctx.beginPath();
-        ctx.arc(-15, 13, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Roda Traseira 2
-        ctx.fillStyle = "#0f172a";
-        ctx.beginPath();
-        ctx.arc(-3, 13, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#94a3b8";
-        ctx.beginPath();
-        ctx.arc(-3, 13, 2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Roda Dianteira
-        ctx.fillStyle = "#0f172a";
-        ctx.beginPath();
-        ctx.arc(15, 13, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "#94a3b8";
-        ctx.beginPath();
-        ctx.arc(15, 13, 2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(-15, 13, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(-3, 13, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(15, 13, 6, 0, Math.PI * 2); ctx.fill();
 
         ctx.restore();
     }
 
-    // Função auxiliar para desenhar caixas de papelão realistas com palete na base
     function drawBox(x, y, width) {
         ctx.save();
-        
-        // Desenha a base de madeira do palete
-        ctx.fillStyle = "#a16207"; // Marrom madeira
+        ctx.fillStyle = "#a16207";
         ctx.fillRect(x + 4, y - 4, width - 8, 4);
-        
-        // Desenha o bloco principal da caixa de papelão (Kraft)
         ctx.fillStyle = "#d97706"; 
         ctx.fillRect(x + 6, y - 30, width - 12, 26);
-
-        // Sombra lateral da caixa para dar profundidade 3D
         ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
         ctx.fillRect(x + width - 15, y - 30, 9, 26);
-
-        // Fita adesiva de lacre (Marrom escura/transparente no topo/meio)
         ctx.fillStyle = "#78350f";
         ctx.fillRect(x + (width/2) - 3, y - 30, 6, 26);
-
-        // Etiqueta de identificação/Logística branca com código de barras simbólico
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(x + 12, y - 20, 10, 12);
-        ctx.fillStyle = "#1e293b";
-        ctx.fillRect(x + 14, y - 17, 6, 1);
-        ctx.fillRect(x + 14, y - 14, 6, 1);
-        ctx.fillRect(x + 14, y - 11, 4, 1);
-
         ctx.restore();
     }
 
-    // Desenha as Estruturas Porta-Paletes (Racks com Caixas Estocadas)
     function drawPipes() {
         const shelfSpacing = 35; 
-
-        // 1. OBSTÁCULO SUPERIOR (Estrutura suspensa)
-        // Colunas verticais de sustentação (Azul Industrial)
         ctx.fillStyle = "#1e3a8a"; 
         ctx.fillRect(pipe.x, 0, 10, pipe.topHeight);
         ctx.fillRect(pipe.x + pipe.width - 10, 0, 10, pipe.topHeight);
 
-        // Vigas horizontais laranjas e Caixas
         let shelfIndex = 0;
         for (let y = shelfSpacing; y < pipe.topHeight; y += shelfSpacing) {
-            // Desenha caixas em prateleiras alternadas (ex: prateleira 0 e 2)
-            if (shelfIndex % 2 === 0) {
-                drawBox(pipe.x, y - 4, pipe.width);
-            }
-
-            // Viga horizontal (Laranja de segurança)
+            if (shelfIndex % 2 === 0) drawBox(pipe.x, y - 4, pipe.width);
             ctx.fillStyle = "#f97316";
             ctx.fillRect(pipe.x, y - 4, pipe.width, 5);
             shelfIndex++;
         }
 
-        // 2. OBSTÁCULO INFERIOR (Estrutura fixada no chão)
-        // Colunas verticais de sustentação (Azul Industrial)
         ctx.fillStyle = "#1e3a8a";
         ctx.fillRect(pipe.x, pipe.bottomY, 10, canvas.height - pipe.bottomY);
         ctx.fillRect(pipe.x + pipe.width - 10, pipe.bottomY, 10, canvas.height - pipe.bottomY);
 
-        // Vigas horizontais laranjas e Caixas
         shelfIndex = 0;
         for (let y = pipe.bottomY; y < canvas.height - 10; y += shelfSpacing) {
-            // Desenha caixas em prateleiras alternadas do chão (ex: prateleira 1 e 3)
-            if (shelfIndex % 2 === 1 && y + shelfSpacing < canvas.height) {
-                drawBox(pipe.x, y + shelfSpacing, pipe.width);
-            }
-
-            // Viga horizontal (Laranja de segurança)
+            if (shelfIndex % 2 === 1 && y + shelfSpacing < canvas.height) drawBox(pipe.x, y + shelfSpacing, pipe.width);
             ctx.fillStyle = "#f97316";
             ctx.fillRect(pipe.x, y, pipe.width, 5);
             shelfIndex++;
@@ -486,13 +480,13 @@
             truck.y += truck.velocity;
             pipe.x -= pipe.speed;
 
-            // Queda ou batida no teto do armazém = GAME OVER DIRETO
+            // Queda ou batida no teto
             if (truck.y - (truck.height/2) < 0 || truck.y + (truck.height/2) > canvas.height) {
-                triggerGameOver("💥 CRASH OPERACIONAL! Você perdeu o controle físico e colidiu fora dos limites do armazém.");
+                triggerGameOver("💥 CRASH OPERACIONAL! Você perdeu o controle de altitude e colidiu fora das pistas do CD.");
                 return;
             }
 
-            // GATILHO DO QUIZ: Pausa o jogo quando a estrutura se aproxima (150px de distância)
+            // GATILHO DO QUIZ
             if (pipe.x <= truck.x + 150 && !pipe.quizTriggered) {
                 gameState = "QUIZ";
                 pipe.quizTriggered = true;
@@ -500,7 +494,7 @@
                 return;
             }
 
-            // COLISÃO FÍSICA NAS ESTRUTURAS (Bounding Box) = GAME OVER DIRETO
+            // COLISÃO FÍSICA
             const truckLeft = truck.x - 25;
             const truckRight = truck.x + 25;
             const truckTop = truck.y - 16;
@@ -508,12 +502,12 @@
 
             if (pipe.x <= truckRight && pipe.x + pipe.width >= truckLeft) {
                 if (truckTop < pipe.topHeight || truckBottom > pipe.bottomY) {
-                    triggerGameOver("💥 COLISÃO CRÍTICA! O caminhão colidiu diretamente contra as estruturas de armazenagem (Porta-Paletes).");
+                    triggerGameOver("💥 COLISÃO FÍSICA CRÍTICA! O veículo chocou-se diretamente contra os racks de armazenamento.");
                     return;
                 }
             }
 
-            // Passou pelo corredor/estrutura com sucesso
+            // Passou pelo corredor com sucesso
             if (pipe.x + pipe.width < 0) {
                 score++;
                 currentQuestionIndex++;
@@ -532,20 +526,13 @@
 
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Chão decorativo (Piso epóxi cinza de CD de alta resistência)
         ctx.fillStyle = "#334155";
         ctx.fillRect(0, canvas.height - 12, canvas.width, 12);
-        
-        // Faixa amarela de demarcação de segurança na base da pista
         ctx.strokeStyle = "#eab308";
         ctx.lineWidth = 2;
         ctx.setLineDash([15, 15]);
-        ctx.beginPath();
-        ctx.moveTo(0, canvas.height - 6);
-        ctx.lineTo(canvas.width, canvas.height - 6);
-        ctx.stroke();
-        ctx.setLineDash([]); // Reseta o tracejado para o restante dos desenhos
+        ctx.beginPath(); ctx.moveTo(0, canvas.height - 6); ctx.lineTo(canvas.width, canvas.height - 6); ctx.stroke();
+        ctx.setLineDash([]);
 
         drawPipes();
         drawTruck();
@@ -582,21 +569,17 @@
         const correct = perguntas[currentQuestionIndex].correta;
 
         if (selected === correct) {
-            // Acertou: Pequeno impulso para continuar o voo e cruzar o vão livre
             truck.velocity = -3.5; 
             gameState = "FLYING";
         } else {
-            // Errou a resposta: Perde uma vida operacional
             lives--;
             updateHUD();
 
             if (lives <= 0) {
-                triggerGameOver(`📉 QUEBRA DE SLA! Você errou a resposta da alternativa [${selected}] e esgotou todas as suas vidas operacionais.`);
+                triggerGameOver(`📉 QUEBRA DE SLA! Resposta errada na alternativa [${selected}]. O saldo de vidas operacionais zerou.`);
             } else {
-                // Não avança a pergunta: Recua a estrutura para trás e exige o mesmo desafio de novo
                 truck.velocity = -3.5;
                 gameState = "FLYING";
-                
                 pipe.x = 850; 
                 pipe.quizTriggered = false; 
             }
@@ -605,28 +588,52 @@
 
     function triggerGameOver(motivo) {
         gameState = "GAMEOVER";
-        showEndScreen(false, motivo);
+        
+        // Coleta o nome amigável do Porta-Palete atual baseado no índice
+        const identificadorCano = perguntas[currentQuestionIndex] ? perguntas[currentQuestionIndex].titulo.split(":")[0] : `Porta-Palete ${currentQuestionIndex + 1}`;
+
+        // Salva os dados detalhados no localStorage para travar o F5
+        localStorage.setItem("logichaos_blocked", "true");
+        localStorage.setItem("logichaos_reason", motivo);
+        localStorage.setItem("logichaos_lives", lives.toString());
+        localStorage.setItem("logichaos_pipe", identificadorCano);
+
+        showEndScreen(false, motivo, identificadorCano);
     }
 
-    function showEndScreen(isWin, motivo = "") {
+    function showEndScreen(isWin, motivo = "", canoFalha = "") {
         const screen = document.getElementById("end-screen");
         const title = document.getElementById("end-title");
         const msg = document.getElementById("end-message");
+        const restartBtn = document.getElementById("restart-btn");
 
         if(isWin) {
             title.innerText = "🏆 SUCESSO OPERACIONAL! 🥇";
             title.style.color = "#10b981";
-            msg.innerText = `Sensacional! Vocês dominaram a cadeia de suprimentos, responderam às 10 auditorias com maestria e garantiram a melhor eficiência de frete e armazenagem do semestre!`;
+            msg.innerHTML = `Sensacional! Vocês dominaram toda a malha logística e completaram os 10 testes regulatórios com sucesso!<br><br>
+            📦 <b>RELATÓRIO DE DESEMPENHO:</b><br>
+            • Você concluiu o turno e chegou ao final com exatamente <b>${lives} de 5 vidas</b> intactas! Eficiência de frota comprovada.`;
+            restartBtn.classList.remove("hidden");
         } else {
             title.innerText = "💥 CRASH OPERACIONAL!";
             title.style.color = "#ef4444";
-            msg.innerText = motivo;
+            msg.innerHTML = `${motivo}<br><br>
+            📊 <b>DIAGNÓSTICO DA AUDITORIA:</b><br>
+            • Falha ocorrida no setor: <b>${canoFalha}</b><br>
+            • Saldo de vidas restantes no momento do impacto: <b>${lives}</b><br><br>
+            🛑 <b>SISTEMA BLOQUEADO:</b> Seus dados de sinistro foram salvos. O terminal está indisponível para novos turnos.`;
+            
+            restartBtn.className = "btn-action btn-disabled";
+            restartBtn.disabled = true;
+            restartBtn.innerText = "Sistema Bloqueado Definitivamente";
         }
 
         screen.classList.remove("hidden");
     }
 
     function startGame() {
+        if (checkBlockStatus()) return;
+
         document.getElementById("start-screen").classList.add("hidden");
         score = 0;
         lives = 5;
@@ -640,11 +647,11 @@
     }
 
     function restartGame() {
+        if (checkBlockStatus()) return; 
         document.getElementById("end-screen").classList.add("hidden");
         startGame();
     }
 
-    // Iniciar loop principal do jogo
     gameLoop();
 </script>
 
