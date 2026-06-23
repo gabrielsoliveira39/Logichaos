@@ -30,7 +30,7 @@
         }
 
         canvas {
-            background: #70c5ce;
+            background: #1e293b; /* Fundo simulando corredor escuro de um CD */
             display: block;
         }
 
@@ -141,27 +141,6 @@
             font-size: 28px;
             text-shadow: 2px 2px 0px #000;
         }
-
-        /* Caixa de Relatório do Game Over */
-        .report-box {
-            background: #1e293b;
-            border: 2px solid #ef4444;
-            padding: 15px 25px;
-            border-radius: 8px;
-            margin-top: 15px;
-            text-align: left;
-            width: 90%;
-            max-width: 550px;
-            font-family: monospace;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        .report-title {
-            color: #ef4444;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
     </style>
 </head>
 <body>
@@ -173,12 +152,11 @@
     </div>
 
     <div id="start-screen" class="overlay">
-        <h2>📦 FLAPPY LOGIQUIZ 🦅</h2>
-        <p style="max-width: 500px;">Suba e desça usando a barra de <b>ESPAÇO</b> ou o <b>CLIQUE</b>.<br><br>
+        <h2>📦 FLAPPY LOGIQUIZ 🚚</h2>
+        <p style="max-width: 500px;">Manobre o caminhão subindo e descendo usando a barra de <b>ESPAÇO</b> ou o <b>CLIQUE</b>.<br><br>
         ⚠️ <b>REGRAS DA DISPUTA:</b><br>
-        • Colisão física com cano ou chão = <b>Game Over Direto</b>.<br>
-        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>!<br><br>
-        🚫 <b>ATENÇÃO:</b> Se der Game Over, seu sistema será bloqueado definitivamente nesta máquina!
+        • Colisão física com estruturas ou chão = <b>Game Over Direto</b>.<br>
+        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>!
         </p>
         <button class="btn-action" onclick="startGame()">Iniciar Turno</button>
     </div>
@@ -192,13 +170,7 @@
     <div id="end-screen" class="overlay hidden">
         <h2 id="end-title">💥 CRASH OPERACIONAL!</h2>
         <p id="end-message">Sua operação gerou um gargalo insustentável.</p>
-        
-        <div class="report-box" id="report-box">
-            <div class="report-title">📋 Relatório de Auditoria de Danos:</div>
-            • <b>Status Técnico:</b> <span id="rep-motivo" style="color: #f87171;">-</span><br>
-            • <b>Vidas Restantes no Impacto:</b> <span id="rep-vidas" style="color: #fbcfe8;">-</span><br>
-            • <b>Local da Falha:</b> <span id="rep-pergunta" style="color: #fde047;">-</span>
-        </div>
+        <button class="btn-action" onclick="restartGame()">Reiniciar Sistema</button>
     </div>
 
     <canvas id="gameCanvas" width="800" height="500"></canvas>
@@ -208,10 +180,10 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Banco de Dados das 10 Perguntas
+    // Banco de Dados das 10 Perguntas (Nível Avançado)
     const perguntas = [
         {
-            titulo: "⚡ CANO 1: Layout & Curva ABC",
+            titulo: "⚡ PORTA-PALETE 1: Layout & Curva ABC",
             pergunta: "Para otimizar o fluxo de movimentação interna e o layout de um CD, onde devem ser alocados os produtos classificados como 'Curva A'?",
             opcoes: {
                 A: "Nos níveis mais altos das estruturas porta-paletes do fundo do armazém.",
@@ -222,7 +194,7 @@
             correta: "B"
         },
         {
-            titulo: "🚜 CANO 2: Equipamentos de Movimentação",
+            titulo: "🚜 PORTA-PALETE 2: Equipamentos de Movimentação",
             pergunta: "Em um armazém fechado de produtos alimentícios verticalizados, qual equipamento de movimentação é PROIBIDO devido a normas de segurança e saúde?",
             opcoes: {
                 A: "Empilhadeira Elétrica Retrátil.",
@@ -233,7 +205,7 @@
             correta: "C"
         },
         {
-            titulo: "📋 CANO 3: Processo de Conferência",
+            titulo: "📋 PORTA-PALETE 3: Processo de Conferência",
             pergunta: "Durante o recebimento de uma carga, o operador logístico percebe que a quantidade física é menor do que a descrita na Nota Fiscal. Qual o procedimento padrão correto?",
             opcoes: {
                 A: "Aceitar a carga normalmente e corrigir o saldo no inventário dali a 6 meses.",
@@ -244,7 +216,7 @@
             correta: "B"
         },
         {
-            titulo: "📐 CANO 4: O Desafio de Cubagem",
+            titulo: "📐 PORTA-PALETE 4: O Desafio de Cubagem",
             pergunta: "Um espaço de blocado tem 10m de largura por 12m de comprimento. Descontando um corredor central obrigatório de 2m de largura por todo o comprimento para manobra, sobram duas faixas de armazenamento. Sabendo que cada palete PBR ocupa 1,20m x 1,00m de chão e podemos empilhar em até 3 níveis de altura, qual a capacidade máxima do setor?",
             opcoes: {
                 A: "120 Paletes",
@@ -255,7 +227,7 @@
             correta: "C"
         },
         {
-            titulo: "📊 CANO 5: Indicadores de Desempenho (KPIs)",
+            titulo: "📊 PORTA-PALETE 5: Indicadores de Desempenho (KPIs)",
             pergunta: "Uma indústria automotiva entregou 95% dos pedidos no prazo acordado (OTD). No entanto, devido a avarias na separação, apenas 88% desses pedidos chegaram sem erros de documentação ou itens trocados. Qual é o indicador OTIF (On-Time In-Full) final desta operação?",
             opcoes: {
                 A: "OTIF de 91,5%, calculado através da média aritmética simples entre os dois percentuais.",
@@ -266,7 +238,7 @@
             correta: "C"
         },
         {
-            titulo: "🍏 CANO 6: Critérios de Movimentação de Estoque",
+            titulo: "🍏 PORTA-PALETE 6: Critérios de Movimentação de Estoque",
             pergunta: "Um Centro de Distribuição opera com laticínios altamente perecíveis. Visando mitigar o risco de perda de mercadorias por vencimento do prazo de validade comercial, qual estratégia de controle de estoque deve ser aplicada prioritariamente?",
             opcoes: {
                 A: "Método FIFO (PEPS), retirando primeiro os produtos que deram entrada física antes.",
@@ -277,7 +249,7 @@
             correta: "B"
         },
         {
-            titulo: "💻 CANO 7: Sistemas de Informação Logística",
+            titulo: "💻 PORTA-PALETE 7: Sistemas de Informação Logística",
             pergunta: "Durante uma auditoria, constatou-se que a roteirização de frotas e o cálculo de fretes estavam lentos, enquanto a cubagem de paletes e o endereçamento interno funcionavam perfeitamente. Onde está o gargalo tecnológico?",
             opcoes: {
                 A: "No sistema WMS, que deveria gerenciar os custos de combustíveis externos e pedágios da malha.",
@@ -288,8 +260,8 @@
             correta: "C"
         },
         {
-            titulo: "🚚 CANO 8: Custos e Modais de Transporte",
-            pergunta: "Uma empresa precisa transportar uma carga de alto valor adequado e com prazo de entrega de urgência máxima de um extremo a outro do país. Considerando as matrizes de custos e os modais, qual a escolha estratégica correta?",
+            titulo: "🚚 PORTA-PALETE 8: Custos e Modais de Transporte",
+            pergunta: "Uma empresa precisa transportar uma carga de alto valor agregado e com prazo de entrega de urgência máxima de um extremo a outro do país. Considerando as matrizes de custos e os modais, qual a escolha estratégica correta?",
             opcoes: {
                 A: "Modal Ferroviário, pois oferece o menor custo fixo operacional por tonelada transportada.",
                 B: "Modal Hidroviário, visto que apresenta alta capacidade de carga e baixo índice de roubo.",
@@ -299,7 +271,7 @@
             correta: "D"
         },
         {
-            titulo: "📈 CANO 9: Gestão de Estoque e Demanda",
+            titulo: "📈 PORTA-PALETE 9: Gestão de Estoque e Demanda",
             pergunta: "O que acontece com o comportamento gráfico do 'Estoque de Segurança' se o Lead Time (tempo de ressuprimento) de um fornecedor aumentar drasticamente devido a greves na malha rodoviária?",
             opcoes: {
                 A: "O estoque de segurança deve ser reduzido para forçar um giro mais rápido dentro do CD.",
@@ -310,7 +282,7 @@
             correta: "B"
         },
         {
-            titulo: "♻️ CANO 10: Canais e Logística Reversa",
+            titulo: "♻️ PORTA-PALETE 10: Canais e Logística Reversa",
             pergunta: "Uma grande fabricante de eletrodomésticos estruturou um programa para recolher motores queimados nas assistências técnicas e reinseri-los no ciclo produtivo como matéria-prima reciclada. Esse fluxo pertence a qual canal?",
             opcoes: {
                 A: "Canal de Distribuição Direto, pois conecta a fábrica ao cliente sem intermediários.",
@@ -328,17 +300,18 @@
     let lives = 5;
     let currentQuestionIndex = 0;
 
-    // Propriedades do Pássaro
-    const bird = {
+    // Propriedades do Caminhão
+    const truck = {
         x: 150,
         y: 200,
-        radius: 16,
+        width: 50,
+        height: 32,
         velocity: 0,
-        gravity: 0.3,
+        gravity: 0.28,
         flapForce: -4.5
     };
 
-    // Propriedades dos Canos
+    // Propriedades dos Obstáculos (Porta-Paletes)
     const pipe = {
         x: 850,
         width: 80,
@@ -348,75 +321,153 @@
         quizTriggered: false
     };
 
-    // VERIFICAÇÃO DE SEGURANÇA IMEDIATA AO CARREGAR A PÁGINA
-    window.onload = function() {
-        const savedData = localStorage.getItem("logiQuiz_Report");
-        if (savedData) {
-            gameState = "GAMEOVER";
-            document.getElementById("start-screen").classList.add("hidden");
-            
-            // Reconstroi o relatório salvo na memória persistente
-            const report = JSON.parse(savedData);
-            showEndScreen(false, report.motivo, report.vidas, report.pergunta);
-        }
-    };
-
     // Controles
     function flap() {
         if (gameState === "FLYING") {
-            bird.velocity = bird.flapForce;
+            truck.velocity = truck.flapForce;
         }
     }
     window.addEventListener("keydown", (e) => { if (e.code === "Space") flap(); });
     canvas.addEventListener("mousedown", flap);
 
-    // Funções de Desenho
-    function drawBird() {
-        ctx.fillStyle = "#f59e0b";
+    // Desenha o Caminhão de Entregas vetorial no Canvas
+    function drawTruck() {
+        ctx.save();
+        ctx.translate(truck.x, truck.y);
+
+        // 1. Baú de Carga (Traseira)
+        ctx.fillStyle = "#f8fafc"; 
+        ctx.fillRect(-25, -16, 32, 26);
+        ctx.strokeStyle = "#94a3b8";
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(-25, -16, 32, 26);
+
+        // Divisão da folha da porta traseira do baú
         ctx.beginPath();
-        ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#1e293b";
-        ctx.lineWidth = 3;
+        ctx.moveTo(-21, -16);
+        ctx.lineTo(-21, 10);
         ctx.stroke();
 
-        ctx.fillStyle = "white";
+        // 2. Cabine do Motorista (Frente)
+        ctx.fillStyle = "#3b82f6"; 
+        ctx.fillRect(7, -6, 18, 16);
+        
+        // Para-brisa / Janela lateral
+        ctx.fillStyle = "#67e8f9";
+        ctx.fillRect(16, -4, 7, 6);
+
+        // Para-choque
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(21, 6, 5, 4);
+
+        // 3. Rodas com detalhe de calota central
+        // Roda Traseira 1
+        ctx.fillStyle = "#0f172a";
         ctx.beginPath();
-        ctx.arc(bird.x + 6, bird.y - 4, 5, 0, Math.PI * 2);
+        ctx.arc(-15, 13, 6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "black";
+        ctx.fillStyle = "#94a3b8";
         ctx.beginPath();
-        ctx.arc(bird.x + 7, bird.y - 4, 2, 0, Math.PI * 2);
+        ctx.arc(-15, 13, 2, 0, Math.PI * 2);
         ctx.fill();
 
-        ctx.fillStyle = "#ef4444";
+        // Roda Traseira 2
+        ctx.fillStyle = "#0f172a";
         ctx.beginPath();
-        ctx.moveTo(bird.x + 14, bird.y - 2);
-        ctx.lineTo(bird.x + 25, bird.y + 3);
-        ctx.lineTo(bird.x + 14, bird.y + 8);
-        ctx.closePath();
+        ctx.arc(-3, 13, 6, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(-3, 13, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Roda Dianteira
+        ctx.fillStyle = "#0f172a";
+        ctx.beginPath();
+        ctx.arc(15, 13, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#94a3b8";
+        ctx.beginPath();
+        ctx.arc(15, 13, 2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
     }
 
+    // Função auxiliar para desenhar caixas de papelão realistas com palete na base
+    function drawBox(x, y, width) {
+        ctx.save();
+        
+        // Desenha a base de madeira do palete
+        ctx.fillStyle = "#a16207"; // Marrom madeira
+        ctx.fillRect(x + 4, y - 4, width - 8, 4);
+        
+        // Desenha o bloco principal da caixa de papelão (Kraft)
+        ctx.fillStyle = "#d97706"; 
+        ctx.fillRect(x + 6, y - 30, width - 12, 26);
+
+        // Sombra lateral da caixa para dar profundidade 3D
+        ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+        ctx.fillRect(x + width - 15, y - 30, 9, 26);
+
+        // Fita adesiva de lacre (Marrom escura/transparente no topo/meio)
+        ctx.fillStyle = "#78350f";
+        ctx.fillRect(x + (width/2) - 3, y - 30, 6, 26);
+
+        // Etiqueta de identificação/Logística branca com código de barras simbólico
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(x + 12, y - 20, 10, 12);
+        ctx.fillStyle = "#1e293b";
+        ctx.fillRect(x + 14, y - 17, 6, 1);
+        ctx.fillRect(x + 14, y - 14, 6, 1);
+        ctx.fillRect(x + 14, y - 11, 4, 1);
+
+        ctx.restore();
+    }
+
+    // Desenha as Estruturas Porta-Paletes (Racks com Caixas Estocadas)
     function drawPipes() {
-        ctx.fillStyle = "#15803d"; 
-        ctx.strokeStyle = "#14532d";
-        ctx.lineWidth = 4;
+        const shelfSpacing = 35; 
 
-        ctx.fillRect(pipe.x, 0, pipe.width, pipe.topHeight);
-        ctx.strokeRect(pipe.x, -5, pipe.width, pipe.topHeight + 5);
+        // 1. OBSTÁCULO SUPERIOR (Estrutura suspensa)
+        // Colunas verticais de sustentação (Azul Industrial)
+        ctx.fillStyle = "#1e3a8a"; 
+        ctx.fillRect(pipe.x, 0, 10, pipe.topHeight);
+        ctx.fillRect(pipe.x + pipe.width - 10, 0, 10, pipe.topHeight);
 
-        ctx.fillStyle = "#16a34a";
-        ctx.fillRect(pipe.x - 4, pipe.topHeight - 20, pipe.width + 8, 20);
-        ctx.strokeRect(pipe.x - 4, pipe.topHeight - 20, pipe.width + 8, 20);
+        // Vigas horizontais laranjas e Caixas
+        let shelfIndex = 0;
+        for (let y = shelfSpacing; y < pipe.topHeight; y += shelfSpacing) {
+            // Desenha caixas em prateleiras alternadas (ex: prateleira 0 e 2)
+            if (shelfIndex % 2 === 0) {
+                drawBox(pipe.x, y - 4, pipe.width);
+            }
 
-        ctx.fillStyle = "#15803d";
-        ctx.fillRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY);
-        ctx.strokeRect(pipe.x, pipe.bottomY, pipe.width, canvas.height - pipe.bottomY + 5);
+            // Viga horizontal (Laranja de segurança)
+            ctx.fillStyle = "#f97316";
+            ctx.fillRect(pipe.x, y - 4, pipe.width, 5);
+            shelfIndex++;
+        }
 
-        ctx.fillStyle = "#16a34a";
-        ctx.fillRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, 20);
-        ctx.strokeRect(pipe.x - 4, pipe.bottomY, pipe.width + 8, 20);
+        // 2. OBSTÁCULO INFERIOR (Estrutura fixada no chão)
+        // Colunas verticais de sustentação (Azul Industrial)
+        ctx.fillStyle = "#1e3a8a";
+        ctx.fillRect(pipe.x, pipe.bottomY, 10, canvas.height - pipe.bottomY);
+        ctx.fillRect(pipe.x + pipe.width - 10, pipe.bottomY, 10, canvas.height - pipe.bottomY);
+
+        // Vigas horizontais laranjas e Caixas
+        shelfIndex = 0;
+        for (let y = pipe.bottomY; y < canvas.height - 10; y += shelfSpacing) {
+            // Desenha caixas em prateleiras alternadas do chão (ex: prateleira 1 e 3)
+            if (shelfIndex % 2 === 1 && y + shelfSpacing < canvas.height) {
+                drawBox(pipe.x, y + shelfSpacing, pipe.width);
+            }
+
+            // Viga horizontal (Laranja de segurança)
+            ctx.fillStyle = "#f97316";
+            ctx.fillRect(pipe.x, y, pipe.width, 5);
+            shelfIndex++;
+        }
     }
 
     function updateHUD() {
@@ -428,34 +479,41 @@
         document.getElementById("lives-display").innerText = hearts;
     }
 
+    // Física e Regras de Colisão
     function updateGame() {
         if (gameState === "FLYING") {
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
+            truck.velocity += truck.gravity;
+            truck.y += truck.velocity;
             pipe.x -= pipe.speed;
 
-            // Queda no chão ou teto -> COLISÃO FÍSICA
-            if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
-                triggerGameOver("Colisão Física (Queda/Saída de Limites)", lives, perguntas[currentQuestionIndex].titulo);
+            // Queda ou batida no teto do armazém = GAME OVER DIRETO
+            if (truck.y - (truck.height/2) < 0 || truck.y + (truck.height/2) > canvas.height) {
+                triggerGameOver("💥 CRASH OPERACIONAL! Você perdeu o controle físico e colidiu fora dos limites do armazém.");
                 return;
             }
 
-            // GATILHO DO QUIZ
-            if (pipe.x <= bird.x + 150 && !pipe.quizTriggered) {
+            // GATILHO DO QUIZ: Pausa o jogo quando a estrutura se aproxima (150px de distância)
+            if (pipe.x <= truck.x + 150 && !pipe.quizTriggered) {
                 gameState = "QUIZ";
                 pipe.quizTriggered = true;
                 showQuiz();
                 return;
             }
 
-            // COLISÃO FÍSICA NO CANO
-            if (pipe.x <= bird.x + bird.radius && pipe.x + pipe.width >= bird.x - bird.radius) {
-                if (bird.y - bird.radius < pipe.topHeight || bird.y + bird.radius > pipe.bottomY) {
-                    triggerGameOver("Colisão Física Contra Estruturas (Cano)", lives, perguntas[currentQuestionIndex].titulo);
+            // COLISÃO FÍSICA NAS ESTRUTURAS (Bounding Box) = GAME OVER DIRETO
+            const truckLeft = truck.x - 25;
+            const truckRight = truck.x + 25;
+            const truckTop = truck.y - 16;
+            const truckBottom = truck.y + 16;
+
+            if (pipe.x <= truckRight && pipe.x + pipe.width >= truckLeft) {
+                if (truckTop < pipe.topHeight || truckBottom > pipe.bottomY) {
+                    triggerGameOver("💥 COLISÃO CRÍTICA! O caminhão colidiu diretamente contra as estruturas de armazenagem (Porta-Paletes).");
                     return;
                 }
             }
 
+            // Passou pelo corredor/estrutura com sucesso
             if (pipe.x + pipe.width < 0) {
                 score++;
                 currentQuestionIndex++;
@@ -474,11 +532,23 @@
 
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Chão decorativo (Piso epóxi cinza de CD de alta resistência)
         ctx.fillStyle = "#334155";
-        ctx.fillRect(0, canvas.height - 10, canvas.width, 10);
+        ctx.fillRect(0, canvas.height - 12, canvas.width, 12);
+        
+        // Faixa amarela de demarcação de segurança na base da pista
+        ctx.strokeStyle = "#eab308";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([15, 15]);
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - 6);
+        ctx.lineTo(canvas.width, canvas.height - 6);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reseta o tracejado para o restante dos desenhos
 
         drawPipes();
-        drawBird();
+        drawTruck();
     }
 
     function gameLoop() {
@@ -487,6 +557,7 @@
         requestAnimationFrame(gameLoop);
     }
 
+    // Sistema de Quiz
     function showQuiz() {
         const q = perguntas[currentQuestionIndex];
         document.getElementById("quiz-title").innerText = q.titulo;
@@ -511,81 +582,69 @@
         const correct = perguntas[currentQuestionIndex].correta;
 
         if (selected === correct) {
-            bird.velocity = -3.5; 
+            // Acertou: Pequeno impulso para continuar o voo e cruzar o vão livre
+            truck.velocity = -3.5; 
             gameState = "FLYING";
         } else {
+            // Errou a resposta: Perde uma vida operacional
             lives--;
             updateHUD();
 
             if (lives <= 0) {
-                // FIM DE VIDAS NO QUIZ
-                triggerGameOver(`Quebra de SLA (Erros consecutivos no Quiz - Alternativa [${selected}])`, 0, perguntas[currentQuestionIndex].titulo);
+                triggerGameOver(`📉 QUEBRA DE SLA! Você errou a resposta da alternativa [${selected}] e esgotou todas as suas vidas operacionais.`);
             } else {
-                bird.velocity = -3.5;
+                // Não avança a pergunta: Recua a estrutura para trás e exige o mesmo desafio de novo
+                truck.velocity = -3.5;
                 gameState = "FLYING";
+                
                 pipe.x = 850; 
                 pipe.quizTriggered = false; 
             }
         }
     }
 
-    function triggerGameOver(motivo, vidasRestantes, localPergunta) {
+    function triggerGameOver(motivo) {
         gameState = "GAMEOVER";
-        
-        // Objeto de dados para o relatório final
-        const dadosFim = {
-            motivo: motivo,
-            vidas: vidasRestantes + " / 5",
-            pergunta: localPergunta
-        };
-
-        // Salva na máquina para persistir nos recarregamentos
-        localStorage.setItem("logiQuiz_Report", JSON.stringify(dadosFim));
-        
-        showEndScreen(false, dadosFim.motivo, dadosFim.vidas, dadosFim.pergunta);
+        showEndScreen(false, motivo);
     }
 
-    function showEndScreen(isWin, motivo = "", vidas = "", pergunta = "") {
+    function showEndScreen(isWin, motivo = "") {
         const screen = document.getElementById("end-screen");
         const title = document.getElementById("end-title");
         const msg = document.getElementById("end-message");
-        const rBox = document.getElementById("report-box");
 
         if(isWin) {
             title.innerText = "🏆 SUCESSO OPERACIONAL! 🥇";
             title.style.color = "#10b981";
-            msg.innerText = `Sensacional! Vocês dominaram a cadeia de suprimentos, responderam às 10 auditorias com maestria e garantiram a melhor eficiência do semestre!`;
-            rBox.classList.add("hidden"); // Oculta painel de erros em caso de vitória
+            msg.innerText = `Sensacional! Vocês dominaram a cadeia de suprimentos, responderam às 10 auditorias com maestria e garantiram a melhor eficiência de frete e armazenagem do semestre!`;
         } else {
             title.innerText = "💥 CRASH OPERACIONAL!";
             title.style.color = "#ef4444";
-            msg.innerText = "Sua operação gerou um gargalo crítico insustentável. Conforme as regras de auditoria, novas tentativas foram bloqueadas neste terminal.";
-            
-            // Popula os campos dinamicamente na tela
-            document.getElementById("rep-motivo").innerText = motivo;
-            document.getElementById("rep-vidas").innerText = vidas;
-            document.getElementById("rep-pergunta").innerText = pergunta;
-            rBox.classList.remove("hidden");
+            msg.innerText = motivo;
         }
 
         screen.classList.remove("hidden");
     }
 
     function startGame() {
-        if (localStorage.getItem("logiQuiz_Report")) return;
-
         document.getElementById("start-screen").classList.add("hidden");
         score = 0;
         lives = 5;
         currentQuestionIndex = 0;
         updateHUD();
-        bird.y = 200;
-        bird.velocity = 0;
+        truck.y = 200;
+        truck.velocity = 0;
         pipe.x = 850;
         pipe.quizTriggered = false;
         gameState = "FLYING";
     }
 
+    function restartGame() {
+        document.getElementById("end-screen").classList.add("hidden");
+        startGame();
+    }
+
+    // Iniciar loop principal do jogo
     gameLoop();
 </script>
 
