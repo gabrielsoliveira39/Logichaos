@@ -156,7 +156,8 @@
         <p style="max-width: 500px;">Suba e desça usando a barra de <b>ESPAÇO</b> ou o <b>CLIQUE</b>.<br><br>
         ⚠️ <b>REGRAS DA DISPUTA:</b><br>
         • Colisão física com cano ou chão = <b>Game Over Direto</b>.<br>
-        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>!
+        • Errar pergunta do Quiz = <b>Perde 1 Vida e repete o mesmo desafio</b>!<br><br>
+        🚫 <b>ATENÇÃO:</b> O sistema detecta tentativas de recarregar a página. Se der Game Over, seu sistema será bloqueado definitivamente nesta máquina!
         </p>
         <button class="btn-action" onclick="startGame()">Iniciar Turno</button>
     </div>
@@ -170,8 +171,7 @@
     <div id="end-screen" class="overlay hidden">
         <h2 id="end-title">💥 CRASH OPERACIONAL!</h2>
         <p id="end-message">Sua operação gerou um gargalo insustentável.</p>
-        <button class="btn-action" onclick="restartGame()">Reiniciar Sistema</button>
-    </div>
+        </div>
 
     <canvas id="gameCanvas" width="800" height="500"></canvas>
 </div>
@@ -180,7 +180,7 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Banco de Dados das 10 Perguntas (Nível Avançado e Alternativas de Tamanho Equivalente)
+    // Banco de Dados das 10 Perguntas
     const perguntas = [
         {
             titulo: "⚡ CANO 1: Layout & Curva ABC",
@@ -266,7 +266,7 @@
                 A: "Modal Ferroviário, pois oferece o menor custo fixo operacional por tonelada transportada.",
                 B: "Modal Hidroviário, visto que apresenta alta capacidade de carga e baixo índice de roubo.",
                 C: "Modal Rodoviário, devido ao baixo custo de combustível e altíssima velocidade em longas distâncias.",
-                D: "Modal Aéreo, dado que possui alto custo variável, mas compensa pelo menor tempo de trânsito."
+                D: "Modal Aéreo, dado que possui alto custo variable, mas compensa pelo menor tempo de trânsito."
             },
             correta: "D"
         },
@@ -318,6 +318,16 @@
         bottomY: 320,
         speed: 3.0,
         quizTriggered: false
+    };
+
+    // VERIFICAÇÃO DE SEGURANÇA IMEDIATA AO CARREGAR A PÁGINA
+    window.onload = function() {
+        if (localStorage.getItem("logiQuiz_GameOver") === "true") {
+            // Trava o jogo instantaneamente na tela de bloqueio
+            gameState = "GAMEOVER";
+            document.getElementById("start-screen").classList.add("hidden");
+            showEndScreen(false, "SISTEMA BLOQUEADO. Sua operação anterior gerou um crash crítico. Conforme as regras da auditoria, não são permitidas novas tentativas neste terminal.");
+        }
     };
 
     // Controles
@@ -400,13 +410,13 @@
             bird.y += bird.velocity;
             pipe.x -= pipe.speed;
 
-            // Queda no chão ou teto = GAME OVER DIRETO
+            // Queda no chão ou teto
             if (bird.y - bird.radius < 0 || bird.y + bird.radius > canvas.height) {
                 triggerGameOver("💥 CRASH OPERACIONAL! Você perdeu o controle físico e saiu dos limites seguros do armazém.");
                 return;
             }
 
-            // GATILHO DO QUIZ: Pausa o jogo quando o cano se aproxima (150px de distância)
+            // GATILHO DO QUIZ
             if (pipe.x <= bird.x + 150 && !pipe.quizTriggered) {
                 gameState = "QUIZ";
                 pipe.quizTriggered = true;
@@ -414,7 +424,7 @@
                 return;
             }
 
-            // COLISÃO FÍSICA NO CANO = GAME OVER DIRETO (Sem uso de vidas)
+            // COLISÃO FÍSICA NO CANO
             if (pipe.x <= bird.x + bird.radius && pipe.x + pipe.width >= bird.x - bird.radius) {
                 if (bird.y - bird.radius < pipe.topHeight || bird.y + bird.radius > pipe.bottomY) {
                     triggerGameOver("💥 COLISÃO CRÍTICA! Você colidiu diretamente contra as estruturas de armazenagem.");
@@ -422,7 +432,7 @@
                 }
             }
 
-            // Passou pelo cano com sucesso (Acertou a pergunta e cruzou a barreira)
+            // Passou pelo cano com sucesso
             if (pipe.x + pipe.width < 0) {
                 score++;
                 currentQuestionIndex++;
@@ -481,22 +491,17 @@
         const correct = perguntas[currentQuestionIndex].correta;
 
         if (selected === correct) {
-            // Acertou: Libera o voo para cruzar o cano atual
             bird.velocity = -3.5; 
             gameState = "FLYING";
         } else {
-            // Errou a resposta: Perde uma vida!
             lives--;
             updateHUD();
 
             if (lives <= 0) {
                 triggerGameOver(`📉 QUEBRA DE SLA! Você errou a resposta da alternativa [${selected}] e esgotou todas as suas vidas operacionais.`);
             } else {
-                // NÃO AVANÇA A PERGUNTA: O cano volta para trás (extrema direita) 
-                // e o gatilho é resetado para exigir a mesma pergunta novamente.
                 bird.velocity = -3.5;
                 gameState = "FLYING";
-                
                 pipe.x = 850; 
                 pipe.quizTriggered = false; 
             }
@@ -505,6 +510,8 @@
 
     function triggerGameOver(motivo) {
         gameState = "GAMEOVER";
+        // REGISTRA A TRAVA PERMANENTE NO NAVEGADOR DO ALUNO
+        localStorage.setItem("logiQuiz_GameOver", "true");
         showEndScreen(false, motivo);
     }
 
@@ -527,6 +534,9 @@
     }
 
     function startGame() {
+        // Bloqueio extra caso cliquem insistanmente
+        if (localStorage.getItem("logiQuiz_GameOver") === "true") return;
+
         document.getElementById("start-screen").classList.add("hidden");
         score = 0;
         lives = 5;
@@ -537,11 +547,6 @@
         pipe.x = 850;
         pipe.quizTriggered = false;
         gameState = "FLYING";
-    }
-
-    function restartGame() {
-        document.getElementById("end-screen").classList.add("hidden");
-        startGame();
     }
 
     // Iniciar loop principal
